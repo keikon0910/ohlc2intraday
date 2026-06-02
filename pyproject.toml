@@ -1,0 +1,21 @@
+[project]
+name = "ohlc2intraday"
+version = "0.0.1"
+description = "Generate synthetic intraday paths from daily OHLC data"
+authors = [{name = "Kei Konno"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "pandas>=2.0",
+    "matplotlib>=3.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "jupyter", "yfinance"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

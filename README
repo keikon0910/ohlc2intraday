@@ -1,0 +1,34 @@
+# ohlc2intraday
+
+Generate synthetic intraday price paths from daily OHLC data,
+based on Riedel (2021) "The Value of the High, Low and Close 
+in the Estimation of Brownian Motion".
+
+## Motivation
+
+Academic finance research often requires intraday data (TAQ, Bloomberg, etc.)
+that costs $$$/year. Individual researchers and students can only access
+free daily data (Yahoo Finance). This package bridges the gap by generating
+statistically plausible intraday paths conditioned on daily OHLC.
+
+## Status
+
+Under active development (Phase 0).
+
+- [x] Project structure
+- [ ] Section 2: Basic Brownian bridge (close-only condition)
+- [ ] Section 3: Close + High conditioning
+- [ ] Section 4: Full OHLC conditioning
+- [ ] Validation against FirstRateData ground truth
+- [ ] PyPI release
+
+## Reference
+
+Riedel, K. (2021). The Value of the High, Low and Close 
+in the Estimation of Brownian Motion. 
+*Statistical Inference for Stochastic Processes.*
+[arXiv:1911.05280](https://arxiv.org/abs/1911.05280)
+
+## License
+
+MIT
