@@ -31,7 +31,8 @@ Brownian motion given its high, low, and close. We implement this incrementally:
 - **Section 2** — Brownian bridge conditioned on close only (baseline).
 - **Section 3** — conditioned on close **and high** (Theorem 3.4), with an
   exact path sampler via Bessel(3)-bridge (Williams) decomposition.
-- **Section 4** — full OHLC conditioning (planned).
+- **Section 4** — full OHLC conditioning, including a Garman-Klass volatility
+  estimator and a two-sided barrier sampler (in progress).
 
 Synthetic paths are validated against **FirstRateData SPX 1-minute data**
 (2008–2026) as ground truth.
@@ -42,25 +43,32 @@ Synthetic paths are validated against **FirstRateData SPX 1-minute data**
 - [x] Section 2: Brownian bridge (close-only)
 - [x] Section 3: close + high (Theorem 3.4 + Bessel(3) sampler)
 - [x] Long-term validation (250 days, FirstRateData ground truth)
-- [ ] Section 4: full OHLC conditioning
+- [x] Garman-Klass volatility estimation (full OHLC)
+- [ ] Section 4: two-sided barrier sampler (low constraint)
 - [ ] Replication matrix on existing finance papers (HAR, SHAR, ...)
 - [ ] PyPI release
 
 ### Key Results
 
-Section 3 vs Section 2 over 250 trading days of SPX 1-min data.
+Evaluated on 250 trading days of SPX 1-min data (FirstRateData ground truth).
 Ratio = synthetic return std / true return std (1.0 = perfect).
 
-| Method | median ratio | IQR |
-|--------|--------------|-----|
-| Section 2 (close only) | 0.787 | [0.320, 1.194] |
-| Section 3 (close + high) | 0.879 | [0.629, 1.114] |
+| Method | median ratio | IQR | closer to 1.0 |
+|--------|--------------|-----|---------------|
+| Section 2 (close only) | 0.787 | [0.320, 1.194] | — |
+| Section 3 (close + high, MLE σ²) | 0.879 | [0.629, 1.114] | 69.6% |
+| Section 3 (close + high, Garman-Klass σ²) | 1.037 | [0.888, 1.219] | 79.2% |
 
-- Section 3 is closer to the true volatility on **69.6%** of days.
-- Section 3 mainly helps by **reducing variability** (much tighter IQR),
-  not just shifting the median.
-- Section 3 low-violation rate: median 22.5%, mean 32.4%,
-  which motivates Section 4 (adding the low constraint).
+- Adding the high price and estimating volatility from the **full OHLC**
+  (Garman-Klass) brings the median ratio to ~1.0 and tightens the IQR
+  substantially.
+- Section 3 is closer to the true volatility on **79.2%** of days.
+- The improvement comes mainly from **better volatility estimation**, not
+  from a different path shape (confirmed by an info-only control where both
+  methods use the true σ²).
+- Low-violation rate (paths breaching the true low) rose to median 30% /
+  mean 41% with Garman-Klass, motivating the **two-sided barrier sampler**
+  in Section 4.
 
 ### Repository layout
 ohlc2intraday/
@@ -115,7 +123,8 @@ Riedel (2021) に基づき、**日次OHLCデータから統計的に妥当な日
 - **Section 2** — 終値のみを条件とするブラウン橋 (ベースライン)。
 - **Section 3** — 終値**と高値**を条件 (Theorem 3.4)。Bessel(3)橋 (Williams) 分解に
   よる厳密なパスサンプラーを実装。
-- **Section 4** — OHLC全条件 (予定)。
+- **Section 4** — OHLC全条件。Garman-Klass ボラティリティ推定量と両側バリア
+  サンプラーを含む (実装中)。
 
 生成したパスは、真値として **FirstRateData の SPX 1分足データ** (2008–2026) で検証する。
 
@@ -125,25 +134,29 @@ Riedel (2021) に基づき、**日次OHLCデータから統計的に妥当な日
 - [x] Section 2: ブラウン橋 (終値のみ)
 - [x] Section 3: 終値+高値 (Theorem 3.4 + Bessel(3)サンプラー)
 - [x] 長期検証 (250日、FirstRateData真値)
-- [ ] Section 4: OHLC全条件
+- [x] Garman-Klass ボラティリティ推定 (OHLC全点使用)
+- [ ] Section 4: 両側バリアサンプラー (安値制約)
 - [ ] 既存研究の再現性マトリクス (HAR, SHAR, ...)
 - [ ] PyPI 公開
 
 ### 主要な結果
 
-SPX 1分足 250営業日での Section 3 vs Section 2 の比較。
+SPX 1分足 250営業日での評価 (FirstRateData真値)。
 比率 = 合成リターンの標準偏差 / 真値リターンの標準偏差 (1.0 が完全一致)。
 
-| 手法 | 比率の中央値 | 四分位範囲 (IQR) |
-|------|------------|-----------------|
-| Section 2 (終値のみ) | 0.787 | [0.320, 1.194] |
-| Section 3 (終値+高値) | 0.879 | [0.629, 1.114] |
+| 手法 | 比率の中央値 | 四分位範囲 (IQR) | 1.0に近い割合 |
+|------|------------|-----------------|--------------|
+| Section 2 (終値のみ) | 0.787 | [0.320, 1.194] | — |
+| Section 3 (終値+高値, MLE σ²) | 0.879 | [0.629, 1.114] | 69.6% |
+| Section 3 (終値+高値, Garman-Klass σ²) | 1.037 | [0.888, 1.219] | 79.2% |
 
-- Section 3 は **69.6%** の日で真値ボラティリティに近い。
-- Section 3 の改善は主に**バラつきの縮小** (IQRが大幅に狭い) によるもので、
-  中央値の改善だけではない。
-- Section 3 の安値違反率: 中央値 22.5%、平均 32.4%。
-  これが Section 4 (安値制約の追加) の動機となる。
+- 高値を加え、さらに**OHLC全点**でボラティリティを推定する (Garman-Klass) と、
+  中央値が約1.0に達し、IQRが大幅に狭まる。
+- Section 3 は **79.2%** の日で真値ボラティリティに近い。
+- 改善の主因は**ボラティリティ推定の精度向上**であり、パスの形ではない
+  (両手法に真のσ²を与える対照実験で確認済み)。
+- 安値違反率 (真の安値を突き破るパスの割合) は Garman-Klass で
+  中央値30% / 平均41% に増加し、Section 4 の**両側バリアサンプラー**の動機となる。
 
 ### リポジトリ構成
 ohlc2intraday/

@@ -66,7 +66,9 @@ def eval_day(day_df, n_paths, rng):
     s2_std = np.diff(s2, axis=1).std()
 
     # --- S3: close+high, MLE sigma2 = (2h-c)^2/3 ---
-    s3_sig2 = max((2 * lH - lC) ** 2 / 3.0, 1e-16)
+    # --- S3: close+high, sigma2 = Garman-Klass (OHLC全点使用) ---
+    gk = 0.5 * (lH - lL) ** 2 - (2 * np.log(2) - 1) * lC ** 2
+    s3_sig2 = max(gk, (2 * lH - lC) ** 2 / 3.0, 1e-16)  # GKが負ならMLEにフォールバック
     s3 = np.array([
         generate_path_ohc(0.0, lH, lC, n_steps=n, sigma2=s3_sig2, rng=rng)
         for _ in range(n_paths)
@@ -113,7 +115,7 @@ def main():
 
     import os
     os.makedirs("../results", exist_ok=True)
-    res.to_csv("../results/long_term_s2_vs_s3.csv", index=False)
+    res.to_csv("../results/long_term_s3_gk.csv", index=False)
     print("\nSaved to ../results/long_term_s2_vs_s3.csv")
 
 
