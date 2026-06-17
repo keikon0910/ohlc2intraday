@@ -1,16 +1,11 @@
-"""
-Exact intraday path sampler conditioned on Open, High, Close.
-Based on the Bessel(3)-bridge decomposition at the path maximum
-(Williams decomposition), consistent with Riedel (2021) Section 3.
-
-Validated against the closed-form moments of Theorem 3.4
-(see conditional_close_high.py).
-"""
+# Section 3: 終値と高値を条件にした厳密パスサンプラー
+# Williams 分解で argmax 時刻 tau を引き、その前後を Bessel(3)橋でつなぐ。
+# 終値=c, 最大=h を厳密に満たし、Theorem 3.4 のモーメントと一致する。
 import numpy as np
 
 
 def _std_brownian_bridge(ts, T, sigma2, rng):
-    """Brownian bridge 0->0 on [0,T] sampled at times ts (incl. 0 and T)."""
+    # 0->0 のブラウン橋を時刻 ts でサンプル
     dt = np.diff(ts)
     incr = rng.normal(0, np.sqrt(sigma2 * dt))
     W = np.concatenate([[0.0], np.cumsum(incr)])
@@ -18,7 +13,7 @@ def _std_brownian_bridge(ts, T, sigma2, rng):
 
 
 def _bes3_bridge(a, b, ts, T, sigma2, rng):
-    """Exact Bessel(3) bridge from a to b on [0,T] at times ts."""
+    # a->b の Bessel(3)橋 (3本のブラウン橋の二乗和の平方根)
     lin = a * (1 - ts / T) + b * (ts / T)
     w1 = _std_brownian_bridge(ts, T, sigma2, rng)
     w2 = _std_brownian_bridge(ts, T, sigma2, rng)
@@ -27,7 +22,7 @@ def _bes3_bridge(a, b, ts, T, sigma2, rng):
 
 
 def _sample_argmax_time(c, h, sigma2, rng, grid=4000):
-    """Sample the time at which the maximum h is attained."""
+    # 高値到達時刻 tau の密度から引く。grid 上で離散化してサンプル。
     eps = 1e-9
     taus = np.linspace(eps, 1 - eps, grid)
     a = max(h, 1e-9)
@@ -42,23 +37,8 @@ def _sample_argmax_time(c, h, sigma2, rng, grid=4000):
 
 def generate_path_ohc(open_price, high, close, n_steps=390,
                       sigma2=None, rng=None):
-    """
-    Generate one intraday path with B(0)=open, B(1)=close, max=high.
-
-    Parameters
-    ----------
-    open_price, high, close : float
-        Daily values. Requires high >= max(open_price, close).
-    n_steps : int
-        Number of intraday steps (390 = 1-min bars).
-    sigma2 : float, optional
-        Total variance over the day. If None, a rough estimate is used.
-    rng : np.random.Generator, optional
-
-    Returns
-    -------
-    path : np.ndarray of length n_steps + 1
-    """
+    # 始値・高値・終値を条件に経路を1本生成。長さ n_steps+1、元の価格スケール。
+    # sigma2 を省くと範囲から雑に推定する。
     if rng is None:
         rng = np.random.default_rng()
     c = close - open_price
@@ -68,11 +48,13 @@ def generate_path_ohc(open_price, high, close, n_steps=390,
     if sigma2 is None:
         sigma2 = max(h ** 2 + (h - c) ** 2, 1e-12)
 
+    # 高値到達時刻 tau を引いて、[0,tau] と [tau,1] を BES3橋で構成
     tau = _sample_argmax_time(c, h, sigma2, rng)
     ts_all = np.linspace(0, 1, n_steps + 1)
     left = ts_all <= tau
     ts_L, ts_R = ts_all[left], ts_all[~left]
 
+    # 左側: h - B(t) が h->0 の BES3橋 / 右側: 0->(h-c) の BES3橋
     D_L = _bes3_bridge(h, 0.0, ts_L, tau, sigma2, rng) if len(ts_L) > 1 else np.array([h])
     if len(ts_R) > 0:
         D_R = _bes3_bridge(0.0, h - c, ts_R - tau, 1 - tau, sigma2, rng)
@@ -101,9 +83,8 @@ if __name__ == "__main__":
     print(f"  max <= high: {(maxima <= H + 1e-9).mean() * 100:.1f}%  "
           f"mean max = {maxima.mean():.4f} (H={H})")
     print(f"  1-step return std: {ret_std.mean():.5f} "
-          f"(theory ~ {np.sqrt(sigma2 * dt):.5f})")
+          f"(theory ~{np.sqrt(sigma2 * dt):.5f})")
 
-    # cross-validation against Theorem 3.4 (now in a separate module)
     from conditional_close_high import conditional_mean_var
     print("\n t     empirical mean   Theorem3.4   diff")
     for t_check in [0.1, 0.25, 0.5, 0.75, 0.9]:

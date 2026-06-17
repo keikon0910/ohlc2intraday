@@ -1,24 +1,17 @@
-"""
-Brownian bridge conditioned on Close and High prices.
-Based on Riedel (2021) Section 3, Theorem 3.4.
-
-Convention: shift so open is at 0.
-  c = Close - Open,  h = High - Open  (requires h >= max(0, c))
-"""
+# Section 3: 終値と高値を条件にしたモーメント (Riedel 2021 Theorem 3.4)
+# 各時刻 t での E[B(t)|h,c] と Var を閉形式で計算する。
+# 始値を0にずらした座標で扱う (c = 終値-始値, h = 高値-始値, h >= max(0,c))。
 import numpy as np
 from scipy.special import erf
 
 
 def _phi(x, var):
-    """Normal density N(0, var) at x."""
+    # 正規分布 N(0,var) の密度
     return np.exp(-x * x / (2.0 * var)) / np.sqrt(2.0 * np.pi * var)
 
 
 def _moments_high_close(t, h, c, sigma2):
-    """
-    (M0, M1, M2) from Riedel (2021) Theorem 3.4, eqs (3.12)-(3.14).
-    Uses open=0 convention. Valid for t in (0, 1), h >= max(0, c).
-    """
+    # Theorem 3.4 の (3.12)-(3.14)。始値=0 規約、t in (0,1)、h >= max(0,c)。
     sig_t2 = t * (1.0 - t) * sigma2
     sig_t = np.sqrt(sig_t2)
     r = 2.0 * h - c
@@ -49,10 +42,7 @@ def _moments_high_close(t, h, c, sigma2):
 
 
 def conditional_mean_var(t, high, close, open_price=0.0, sigma2=1.0):
-    """
-    E[B(t) | High, Close] and Var[B(t) | High, Close]
-    in original price coordinates.
-    """
+    # 元の価格スケールでの E[B(t)|高値,終値] と Var
     h = high - open_price
     c = close - open_price
     M0, M1, M2 = _moments_high_close(t, h, c, sigma2)
