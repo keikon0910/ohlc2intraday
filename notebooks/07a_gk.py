@@ -124,7 +124,8 @@ def eval_day(day_df, n_paths, day_seed):
     s2_stats = mean_stats(s2_paths)
 
     # ── S4 (OHLC全条件) ──
-    s4_sig2 = max(np.sum(true_ret**2), 1e-16)
+    gk      = 0.5*(lH-lL)**2 - (2*np.log(2)-1)*lC**2
+    s4_sig2 = max(gk, (2*lH-lC)**2/3.0, 1e-16)
     try:
         sampler, _ = make_sampler_ohlc(
             0.0, lH, lL, lC, n_steps=n, sigma2=s4_sig2,
@@ -291,8 +292,8 @@ def main():
           f"本物 median={res['true_skew'].median():+.4f}")
 
     import os; os.makedirs("../results", exist_ok=True)
-    res.to_csv("../results/phase1_boundary.csv", index=False)
-    print(f"\nSaved: ../results/phase1_boundary.csv")
+    res.to_csv("../results/phase1_boundary_gk.csv", index=False)
+    print(f"\nSaved: ../results/phase1_boundary_gk.csv")
 
 
 if __name__ == "__main__":
