@@ -130,7 +130,8 @@ def eval_day(day_df, n_paths, day_seed):
             0.0, lH, lL, lC, n_steps=n, sigma2=s4_sig2,
             prepass_kwargs=dict(
                 seed=int(rng_s4_prep.integers(1<<31)),
-                target_pool=300, batch=30_000, total=500_000,
+                target_pool=300, batch=30_000, total=5_000_000,
+                tol_sigma=0.15,   # ★σ比例、Step4 で収束確認して確定
             ),
         )
         s4_paths = np.array([sampler(rng_s4_path) for _ in range(n_paths)])

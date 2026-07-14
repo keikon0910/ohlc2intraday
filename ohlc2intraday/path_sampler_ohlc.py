@@ -32,10 +32,14 @@ def _q(s, x, y, l, h, s2, K=5):
     return tot / np.sqrt(2 * np.pi * var)
 
 
-def prepass_argtimes(c, h, l, s2, n_steps=150, total=1_500_000, batch=100_000,
-                     tol=0.06, target_pool=500, seed=None, beta=0.5826):
+def prepass_argtimes(c, h, l, s2, n_steps=150, total=5_000_000, batch=100_000,
+                     tol_sigma=0.15, target_pool=500, seed=None, beta=0.5826):
     # 高値・安値に到達する (tauL, tauH) の組をMCで集める。
     # beta は離散極値の連続性補正 (BGK)。壁を corr だけ内側にして引く。
+    # tol_sigma: 許容誤差を σ (=√s2) 比例で指定。tol_sigma=0.15 は σ の 15% 以内。
+    # (旧: tol=0.06 の絶対値固定は σ² のスケールに追従せず、
+    #  実データレンジで σ の 6-19 倍緩い誤許容になっていた)
+    tol = tol_sigma * np.sqrt(s2)   # ★σ 比例に自動追従
     corr = beta * np.sqrt(s2 / n_steps)
     h_adj, l_adj = h - corr, l + corr
     rng = np.random.default_rng(seed)

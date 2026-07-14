@@ -116,7 +116,7 @@ def eval_day(day_df, n_paths, day_seed):
     true_stats = calc_all(true_log)
 
     # ── S2 ベースライン (終値のみ) ──
-    s2_sig2 = max(np.sum(true_ret**2), 1e-16)  # ★S2もオラクルσ²
+    s2_sig2 = max(lC**2, 1e-16)   # 終値の対数の2乗(GK版のS2)
     s2_paths  = np.array([
         brownian_bridge_path(0.0, lC, n_steps=n, sigma2=s2_sig2, rng=rng_s2)
         for _ in range(n_paths)
@@ -131,7 +131,8 @@ def eval_day(day_df, n_paths, day_seed):
             0.0, lH, lL, lC, n_steps=n, sigma2=s4_sig2,
             prepass_kwargs=dict(
                 seed=int(rng_s4_prep.integers(1<<31)),
-                target_pool=300, batch=30_000, total=500_000,
+                target_pool=300, batch=30_000, total=5_000_000,
+                tol_sigma=0.15,   # ★σ比例、Step4 で収束確認して確定
             ),
         )
         s4_paths = np.array([sampler(rng_s4_path) for _ in range(n_paths)])
