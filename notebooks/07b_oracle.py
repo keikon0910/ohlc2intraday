@@ -1,5 +1,6 @@
-# notebook 07: Phase 1 第一歩
+# notebook 07b: Phase 1 (オラクル版)
 # 「経路でしか作れない量」の再現性を S4 合成経路で検証する
+# σ²: S2 も S4 も実測RV(オラクル)。σ²推定誤差を除いた上限側の測定
 # 検証対象(情報要求度レベル順):
 #   レベル0(土台):    RV (実現ボラ)
 #   レベル1(非自明):  MaxDD (最大ドローダウン)
@@ -100,7 +101,10 @@ def eval_day(day_df, n_paths, day_seed):
 
     lo = np.log(O)
     lH, lL, lC = np.log(H)-lo, np.log(L)-lo, np.log(C)-lo
-    true_log = np.log(prices) - lo
+    # 実測経路の先頭に始値(=0)を追加する。
+    # 従来はバー終値のみで構成しており、始値→1分目のリターンが実測側だけ
+    # 欠けていた(合成経路は始値起点なので非対称だった)。2026-07-25修正。
+    true_log = np.concatenate([[0.0], np.log(prices) - lo])
     true_ret = np.diff(true_log)
     n = len(true_log) - 1
     if true_ret.std() == 0:
